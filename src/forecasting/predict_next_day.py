@@ -1,7 +1,13 @@
+import os
 import joblib
 import pandas as pd
 
 MODEL_PATH = "models/random_forest_model.pkl"
+
+if not os.path.exists(MODEL_PATH):
+    raise FileNotFoundError(
+        "Model file not found. Please run 'python src/forecasting/train_model.py' first."
+    )
 
 features = [
     "lag_1",
