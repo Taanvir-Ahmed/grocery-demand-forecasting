@@ -4,3 +4,8 @@ __pycache__/
 *.pyc
 data/processed/
 .Rhistory
+models/
+.idea/
+notebooks/item_sales/.idea/
+ 
+
