@@ -1,2 +1,2 @@
-model,mae,mape,train_rows,test_rows
-Random Forest,2.091789444369438,144319401.08569646,27496,6874
+model,mae,rmse,wmape,train_rows,test_rows
+Random Forest,2.091789444369438,6.12372806085072,35.137482626937874,27496,6874
