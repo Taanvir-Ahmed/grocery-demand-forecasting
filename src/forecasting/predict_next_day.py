@@ -1,35 +1,86 @@
-from pathlib import Path
+"""Generate a next-day demand prediction using the trained model.
+
+This script loads the saved Random Forest model and predicts next-day
+`units_sold` for a single feature row.
+
+Expected input:
+- a dictionary containing the required prediction features
+
+Required model artifact:
+- models/random_forest_model.pkl
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Dict
+
 import joblib
 import pandas as pd
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-MODEL_PATH = PROJECT_ROOT / "models" / "random_forest_model.pkl"
+from src.config import MODEL_PATH, TRAIN_FEATURES
 
-FEATURES = [
-    "lag_1", "lag_3", "lag_7", "lag_14", "lag_28",
-    "rolling_7", "rolling_14", "rolling_28",
-    "weekday", "weekend", "stock_ratio",
-    "promo_price_interaction", "lag1_stock_interaction",
-]
 
-def predict_next_day(feature_row: dict) -> float:
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
+
+
+def predict_next_day(feature_row: Dict[str, float]) -> float:
+    """Predict next-day units sold for a single observation.
+
+    Args:
+        feature_row: Dictionary containing one row of model input features.
+
+    Returns:
+        Predicted units sold as a float.
+
+    Raises:
+        FileNotFoundError: If the trained model file does not exist.
+        ValueError: If required features are missing.
+    """
     if not MODEL_PATH.exists():
         raise FileNotFoundError(f"Model not found at {MODEL_PATH}")
 
-    model = joblib.load(MODEL_PATH)
-    missing = [c for c in FEATURES if c not in feature_row]
+    missing = [feature for feature in TRAIN_FEATURES if
+               feature not in feature_row]
     if missing:
         raise ValueError(f"Missing required features: {missing}")
 
-    X_new = pd.DataFrame([feature_row])[FEATURES]
-    pred = model.predict(X_new)[0]
-    return float(pred)
+    model = joblib.load(MODEL_PATH)
+    X_new = pd.DataFrame([feature_row])[TRAIN_FEATURES]
+    prediction = model.predict(X_new)[0]
+    return float(prediction)
+
+
+def main() -> None:
+    """Run an example next-day prediction."""
+    example = {
+        "price": 3.49,
+        "promo_flag": 1,
+        "promo_depth": 0.20,
+        "stockout_flag": 0,
+        "lag_1": 20,
+        "lag_3": 18,
+        "lag_7": 22,
+        "lag_14": 19,
+        "lag_28": 17,
+        "rolling_7": 20.1,
+        "rolling_14": 19.4,
+        "rolling_28": 18.8,
+        "weekday": 2,
+        "weekend": 0,
+        "stock_ratio": 1.0,
+        "promo_price_interaction": 3.49,
+        "lag1_stock_interaction": 20.0,
+    }
+
+    try:
+        prediction = predict_next_day(example)
+        logging.info("Prediction completed successfully.")
+        print(f"Predicted next-day units sold: {prediction:.2f}")
+    except Exception as exc:
+        logging.exception("Prediction failed: %s", exc)
+        raise
+
 
 if __name__ == "__main__":
-    example = {
-        "lag_1": 12, "lag_3": 10, "lag_7": 14, "lag_14": 11, "lag_28": 13,
-        "rolling_7": 12.1, "rolling_14": 11.8, "rolling_28": 12.4,
-        "weekday": 2, "weekend": 0, "stock_ratio": 1.0,
-        "promo_price_interaction": 0.0, "lag1_stock_interaction": 12.0,
-    }
-    print(f"Predicted next-day units sold: {predict_next_day(example):.2f}")
+    main()

@@ -1,2 +1,2 @@
-model,mae,rmse,wmape,train_rows,test_rows
-Random Forest,2.091789444369438,6.12372806085072,35.137482626937874,27496,6874
+model,mae,rmse,wmape,train_rows,test_rows,train_start_date,train_end_date,test_start_date,test_end_date
+Random Forest,2.0678535492079937,6.09860581215736,35.04308567988239,27620,6750,2025-09-06,2025-11-15,2025-11-16,2025-11-30

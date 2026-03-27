@@ -1,97 +1,175 @@
-from pathlib import Path
+"""Train the grocery demand forecasting model.
+
+This script loads the engineered sales dataset, applies a time-based split,
+trains a Random Forest regressor, evaluates it with forecasting metrics,
+and saves both the trained model and a one-row metrics report.
+
+Expected inputs:
+- data/processed_sales_features_v2.csv
+
+Generated outputs:
+- models/random_forest_model.pkl
+- reports/item_sales_model_results_v2.csv
+"""
+
+from __future__ import annotations
+
+import logging
+from typing import Tuple
+
+import joblib
 import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
 from sklearn.metrics import mean_absolute_error, mean_squared_error
-import joblib
+
+from src.config import (
+    DATA_PATH,
+    DATE_COLUMN,
+    MODEL_PATH,
+    RANDOM_FOREST_PARAMS,
+    REPORT_PATH,
+    TARGET_COLUMN,
+    TEST_END_DATE,
+    TEST_START_DATE,
+    TRAIN_END_DATE,
+    TRAIN_FEATURES,
+    TRAIN_START_DATE,
+)
 
 
-def wmape(y_true, y_pred, epsilon=1e-6):
-    y_true = np.array(y_true)
-    y_pred = np.array(y_pred)
-    return np.sum(np.abs(y_true - y_pred)) / max(np.sum(np.abs(y_true)), epsilon) * 100
+logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-DATA_PATH = PROJECT_ROOT / "data" / "processed_sales_features_v2.csv"
-MODEL_PATH = PROJECT_ROOT / "models" / "random_forest_model.pkl"
-REPORT_PATH = PROJECT_ROOT / "reports" / "item_sales_model_results_v2.csv"
+def wmape(y_true: pd.Series, y_pred: np.ndarray, epsilon: float = 1e-6) -> float:
+    """Calculate weighted mean absolute percentage error.
+
+    WMAPE is more stable than standard MAPE for demand forecasting because it
+    does not explode on zero-sales days.
+
+    Args:
+        y_true: Actual target values.
+        y_pred: Predicted target values.
+        epsilon: Small value to avoid division by zero.
+
+    Returns:
+        Weighted mean absolute percentage error as a percentage.
+    """
+    y_true_arr = np.array(y_true)
+    y_pred_arr = np.array(y_pred)
+    numerator = np.sum(np.abs(y_true_arr - y_pred_arr))
+    denominator = max(np.sum(np.abs(y_true_arr)), epsilon)
+    return float(numerator / denominator * 100)
 
 
-def main():
+def load_and_validate_data() -> pd.DataFrame:
+    """Load the engineered dataset and validate required columns.
+
+    Returns:
+        Cleaned dataframe sorted by date.
+
+    Raises:
+        FileNotFoundError: If the input CSV does not exist.
+        ValueError: If required columns are missing.
+    """
+    if not DATA_PATH.exists():
+        raise FileNotFoundError(f"Input data file not found: {DATA_PATH}")
+
     df = pd.read_csv(DATA_PATH)
-    df["date"] = pd.to_datetime(df["date"])
-    df = df.sort_values("date").copy()
+    df[DATE_COLUMN] = pd.to_datetime(df[DATE_COLUMN])
+    df = df.sort_values(DATE_COLUMN).copy()
 
-    target = "units_sold"
-    feature_cols = [
-        "price",
-        "promo_flag",
-        "promo_depth",
-        "stockout_flag",
-        "lag_1",
-        "lag_3",
-        "lag_7",
-        "lag_14",
-        "lag_28",
-        "rolling_7",
-        "rolling_14",
-        "rolling_28",
-        "weekday",
-        "weekend",
-        "stock_ratio",
-        "promo_price_interaction",
-        "lag1_stock_interaction",
-    ]
-
-    missing = [c for c in feature_cols + [target] if c not in df.columns]
+    required_columns = TRAIN_FEATURES + [TARGET_COLUMN, DATE_COLUMN]
+    missing = [col for col in required_columns if col not in df.columns]
     if missing:
-        raise ValueError(f"Missing required columns: {missing}")
+        raise ValueError(f"Missing required columns in dataset: {missing}")
 
-    split_idx = int(len(df) * 0.8)
-    train_df = df.iloc[:split_idx]
-    test_df = df.iloc[split_idx:]
+    return df
 
-    X_train = train_df[feature_cols]
-    y_train = train_df[target]
-    X_test = test_df[feature_cols]
-    y_test = test_df[target]
 
-    model = RandomForestRegressor(
-        n_estimators=200,
-        random_state=42,
-        n_jobs=-1
-    )
-    model.fit(X_train, y_train)
+def split_by_date(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """Split the dataset into train and test periods using configured dates.
 
-    preds = model.predict(X_test)
+    Args:
+        df: Input dataframe with a parsed date column.
 
-    mae = mean_absolute_error(y_test, preds)
-    rmse = np.sqrt(mean_squared_error(y_test, preds))
-    demand_wmape = wmape(y_test, preds)
+    Returns:
+        Tuple of (train_df, test_df).
+    """
+    train_df = df[
+        (df[DATE_COLUMN] >= pd.Timestamp(TRAIN_START_DATE)) &
+        (df[DATE_COLUMN] <= pd.Timestamp(TRAIN_END_DATE))
+    ].copy()
 
-    MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
-    REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    test_df = df[
+        (df[DATE_COLUMN] >= pd.Timestamp(TEST_START_DATE)) &
+        (df[DATE_COLUMN] <= pd.Timestamp(TEST_END_DATE))
+    ].copy()
 
-    joblib.dump(model, MODEL_PATH)
+    return train_df, test_df
 
-    report = pd.DataFrame([
-        {
-            "model": "Random Forest",
-            "mae": mae,
-            "rmse": rmse,
-            "wmape": demand_wmape,
-            "train_rows": len(train_df),
-            "test_rows": len(test_df),
-        }
-    ])
-    report.to_csv(REPORT_PATH, index=False)
 
-    print(f"Saved model to {MODEL_PATH}")
-    print(f"Saved report to {REPORT_PATH}")
-    print(f"MAE: {mae:.4f}")
-    print(f"RMSE: {rmse:.4f}")
-    print(f"WMAPE: {demand_wmape:.2f}%")
+def main() -> None:
+    """Run the full model training and evaluation pipeline."""
+    try:
+        logging.info("Loading engineered dataset...")
+        df = load_and_validate_data()
+
+        logging.info("Applying time-based split...")
+        train_df, test_df = split_by_date(df)
+
+        if train_df.empty or test_df.empty:
+            raise ValueError(
+                "Train or test split is empty. "
+                "Please verify the configured date ranges and dataset coverage."
+            )
+
+        X_train = train_df[TRAIN_FEATURES]
+        y_train = train_df[TARGET_COLUMN]
+        X_test = test_df[TRAIN_FEATURES]
+        y_test = test_df[TARGET_COLUMN]
+
+        logging.info("Training Random Forest model...")
+        model = RandomForestRegressor(**RANDOM_FOREST_PARAMS)
+        model.fit(X_train, y_train)
+
+        preds = model.predict(X_test)
+
+        mae = mean_absolute_error(y_test, preds)
+        rmse = np.sqrt(mean_squared_error(y_test, preds))
+        demand_wmape = wmape(y_test, preds)
+
+        MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
+        REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+        joblib.dump(model, MODEL_PATH)
+
+        report = pd.DataFrame([
+            {
+                "model": "Random Forest",
+                "mae": mae,
+                "rmse": rmse,
+                "wmape": demand_wmape,
+                "train_rows": len(train_df),
+                "test_rows": len(test_df),
+                "train_start_date": TRAIN_START_DATE,
+                "train_end_date": TRAIN_END_DATE,
+                "test_start_date": TEST_START_DATE,
+                "test_end_date": TEST_END_DATE,
+            }
+        ])
+        report.to_csv(REPORT_PATH, index=False)
+
+        logging.info("Saved model to %s", MODEL_PATH)
+        logging.info("Saved report to %s", REPORT_PATH)
+        print(f"MAE: {mae:.4f}")
+        print(f"RMSE: {rmse:.4f}")
+        print(f"WMAPE: {demand_wmape:.2f}%")
+
+    except Exception as exc:
+        logging.exception("Training pipeline failed: %s", exc)
+        raise
+
 
 if __name__ == "__main__":
     main()
