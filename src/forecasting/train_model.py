@@ -1,15 +1,15 @@
 from pathlib import Path
+import numpy as np
 import pandas as pd
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.metrics import mean_absolute_error
+from sklearn.metrics import mean_absolute_error, mean_squared_error
 import joblib
 
 
-def safe_mape(y_true, y_pred, epsilon=1e-6):
-    y_true = pd.Series(y_true)
-    y_pred = pd.Series(y_pred)
-    denom = y_true.abs().clip(lower=epsilon)
-    return ((y_true - y_pred).abs() / denom).mean() * 100
+def wmape(y_true, y_pred, epsilon=1e-6):
+    y_true = np.array(y_true)
+    y_pred = np.array(y_pred)
+    return np.sum(np.abs(y_true - y_pred)) / max(np.sum(np.abs(y_true)), epsilon) * 100
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -67,7 +67,8 @@ def main():
     preds = model.predict(X_test)
 
     mae = mean_absolute_error(y_test, preds)
-    mape = safe_mape(y_test, preds)
+    rmse = np.sqrt(mean_squared_error(y_test, preds))
+    demand_wmape = wmape(y_test, preds)
 
     MODEL_PATH.parent.mkdir(parents=True, exist_ok=True)
     REPORT_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -78,7 +79,8 @@ def main():
         {
             "model": "Random Forest",
             "mae": mae,
-            "mape": mape,
+            "rmse": rmse,
+            "wmape": demand_wmape,
             "train_rows": len(train_df),
             "test_rows": len(test_df),
         }
@@ -88,8 +90,5 @@ def main():
     print(f"Saved model to {MODEL_PATH}")
     print(f"Saved report to {REPORT_PATH}")
     print(f"MAE: {mae:.4f}")
-    print(f"MAPE: {mape:.2f}%")
-
-
-if __name__ == "__main__":
-    main()
+    print(f"RMSE: {rmse:.4f}")
+    print(f"WMAPE: {demand_wmape:.2f}%")

@@ -1,2 +1,2 @@
-model,mae,mape
-RandomForestRegressor,2.3423838657138094,578660221810389.1
+model,mae,mape,train_rows,test_rows
+Random Forest,2.091789444369438,144319401.08569646,27496,6874
