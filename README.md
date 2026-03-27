@@ -1,63 +1,96 @@
-# Grocery Demand Forecasting
+# Delivery ETA and Demand Forecasting
 
-A portfolio-ready machine learning project built on simulated daily grocery item sales data. The goal is to forecast next-day SKU-level demand so inventory and operations teams can make better replenishment and promotion decisions.
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-1.x-orange)
+![XGBoost](https://img.shields.io/badge/XGBoost-2.x-green)
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-## Business context
-Wolt-like grocery operations need short-term demand forecasts to reduce stockouts, improve item availability, and support smarter daily planning. This project frames the task as next-day item sales forecasting at the SKU and venue level.
+A machine learning project for next-day grocery demand forecasting in Wolt-like retail operations, using historical sales, promotions, pricing, and stock availability to support better replenishment and inventory decisions.
+
+Repository: [delivery-eta-and-demand-forecasting](https://github.com/Taanvir-Ahmed/delivery-eta-and-demand-forecasting)
+
+---
+
+## Overview
+
+This project addresses a practical retail forecasting problem:
+
+**Can we predict next-day item demand for each SKU at each venue?**
+
+Reliable demand forecasts help operations teams:
+- plan replenishment more effectively
+- reduce stockouts
+- avoid overstocking
+- support promotion-aware inventory decisions
+
+The project combines:
+- exploratory data analysis
+- feature engineering
+- model training and comparison
+- time-based evaluation
+- reproducible Python scripts for training and inference
+- reporting visuals and documentation
+
+---
+
+## Business Context
+
+### Problem
+Forecast next-day `units_sold` for grocery items at SKU and venue level.
+
+### Who uses the output
+- inventory planning teams
+- replenishment planners
+- operations analysts
+- category managers
+- demand planning teams
+
+### What decisions it supports
+- how much stock to prepare for tomorrow
+- which SKUs may need replenishment
+- where promotions may increase demand
+- where stock risk may lead to lost sales
+
+### Why it matters
+Retail and quick-commerce operations depend on balancing product availability with efficient inventory use. Demand forecasting helps make these decisions more data-driven.
+
+---
 
 ## Dataset
-This project uses `grocery_sales_autumn_2025.csv`, a simulated daily grocery sales dataset from venues in Finland. Key columns include:
+
+This project uses the item sales dataset:
+
+- `data/grocery_sales_autumn_2025.csv`
+
+### Dataset summary
+- approximately **40,950 rows**
+- daily grocery sales records
+- time period: **September 1, 2025 to November 30, 2025**
+- target variable: **`units_sold`**
+
+### Main columns
 - `date`
-- `venue_id`, `sku_id`
+- `venue_id`
+- `sku_id`
 - `phl1_id`, `phl2_id`, `phl3_id`
-- `price`, `promo_flag`, `promo_depth`
-- `operating_minutes`, `in_stock_minutes`, `stockout_flag`
+- `country_id`
+- `price`
+- `promo_flag`
+- `promo_depth`
+- `operating_minutes`
+- `in_stock_minutes`
+- `stockout_flag`
 - `units_sold`
 
-## Project structure
-```
-.
-├── data/
-├── models/
-├── notebooks/
-├── reports/
-├── sql/
-└── src/forecasting/
-```
+For full column documentation, see:
+- [`DATA_DICTIONARY.md`](DATA_DICTIONARY.md)
 
-## Workflow
-1. Exploratory analysis in `notebooks/01_eda.ipynb`
-2. Feature engineering in `notebooks/02_feature_engineering.ipynb`
-3. Model training and evaluation in `notebooks/03_train_models.ipynb`
-4. Reproducible training and prediction scripts in `src/forecasting/`
+---
 
-## Features used
-- lag features: `lag_1`, `lag_3`, `lag_7`, `lag_14`, `lag_28`
-- rolling means: `rolling_7`, `rolling_14`, `rolling_28`
-- calendar signals: `weekday`, `weekend`
-- stock signal: `stock_ratio`
-- interaction features: `promo_price_interaction`, `lag1_stock_interaction`
+## Quick Start
 
-## Models evaluated
-- Baseline using lag-1
-- Ridge Regression
-- Random Forest
-- XGBoost
+### 1. Clone the repository
 
-## Suggested report artifacts
-Add these to `reports/` for a stronger portfolio presentation:
-- model comparison table
-- feature importance plot
-- actual vs predicted plot
-- short summary of business implications
-
-## Running the scripts
-Train model:
 ```bash
-python src/forecasting/train_model.py
-```
-
-Run prediction example:
-```bash
-python src/forecasting/predict_next_day.py
-```
+git clone https://github.com/Taanvir-Ahmed/delivery-eta-and-demand-forecasting.git
+cd delivery-eta-and-demand-forecasting
