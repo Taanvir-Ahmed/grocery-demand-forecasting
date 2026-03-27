@@ -92,3 +92,6 @@ def main():
     print(f"MAE: {mae:.4f}")
     print(f"RMSE: {rmse:.4f}")
     print(f"WMAPE: {demand_wmape:.2f}%")
+
+if __name__ == "__main__":
+    main()
