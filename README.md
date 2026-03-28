@@ -7,7 +7,6 @@
 
 A machine learning project for next-day grocery demand forecasting in Wolt-like retail operations, using historical sales, promotions, pricing, and stock availability to support better replenishment and inventory decisions.
 
-Repository: [delivery-eta-and-demand-forecasting](https://github.com/Taanvir-Ahmed/delivery-eta-and-demand-forecasting)
 
 ---
 
@@ -134,6 +133,19 @@ Final Random Forest model performance on a time-based holdout set:
 - **WMAPE:** 35.04%
 
 These results indicate that the model can provide useful next-day demand estimates while preserving a realistic time-based evaluation setup.
+
+---
+
+## Model Comparison
+
+| Model | MAE | RMSE | WMAPE | Status |
+|---|---:|---:|---:|---|
+| Baseline (`lag_1`) | 3.6806 | 10.5525 | 62.37% | Baseline |
+| Ridge Regression | 4.0652 | 8.3887 | 68.89% | Alternative |
+| **Random Forest** | **2.0679** | **6.0986** | **35.04%** | ✅ Best |
+| XGBoost | 2.0755 | 6.0717 | 35.17% | Alternative |
+
+**Why Random Forest was selected:** it achieved the best overall balance of predictive accuracy, robustness, and interpretability for this demand forecasting task.
 
 ---
 

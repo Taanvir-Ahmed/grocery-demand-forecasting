@@ -42,19 +42,7 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 
 def wmape(y_true: pd.Series, y_pred: np.ndarray, epsilon: float = 1e-6) -> float:
-    """Calculate weighted mean absolute percentage error.
-
-    WMAPE is more stable than standard MAPE for demand forecasting because it
-    does not explode on zero-sales days.
-
-    Args:
-        y_true: Actual target values.
-        y_pred: Predicted target values.
-        epsilon: Small value to avoid division by zero.
-
-    Returns:
-        Weighted mean absolute percentage error as a percentage.
-    """
+    """Calculate weighted mean absolute percentage error."""
     y_true_arr = np.array(y_true)
     y_pred_arr = np.array(y_pred)
     numerator = np.sum(np.abs(y_true_arr - y_pred_arr))
@@ -63,15 +51,7 @@ def wmape(y_true: pd.Series, y_pred: np.ndarray, epsilon: float = 1e-6) -> float
 
 
 def load_and_validate_data() -> pd.DataFrame:
-    """Load the engineered dataset and validate required columns.
-
-    Returns:
-        Cleaned dataframe sorted by date.
-
-    Raises:
-        FileNotFoundError: If the input CSV does not exist.
-        ValueError: If required columns are missing.
-    """
+    """Load the engineered dataset and validate required columns."""
     if not DATA_PATH.exists():
         raise FileNotFoundError(f"Input data file not found: {DATA_PATH}")
 
@@ -88,22 +68,15 @@ def load_and_validate_data() -> pd.DataFrame:
 
 
 def split_by_date(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
-    """Split the dataset into train and test periods using configured dates.
-
-    Args:
-        df: Input dataframe with a parsed date column.
-
-    Returns:
-        Tuple of (train_df, test_df).
-    """
+    """Split the dataset into configured train and test windows."""
     train_df = df[
-        (df[DATE_COLUMN] >= pd.Timestamp(TRAIN_START_DATE)) &
-        (df[DATE_COLUMN] <= pd.Timestamp(TRAIN_END_DATE))
+        (df[DATE_COLUMN] >= pd.Timestamp(TRAIN_START_DATE))
+        & (df[DATE_COLUMN] <= pd.Timestamp(TRAIN_END_DATE))
     ].copy()
 
     test_df = df[
-        (df[DATE_COLUMN] >= pd.Timestamp(TEST_START_DATE)) &
-        (df[DATE_COLUMN] <= pd.Timestamp(TEST_END_DATE))
+        (df[DATE_COLUMN] >= pd.Timestamp(TEST_START_DATE))
+        & (df[DATE_COLUMN] <= pd.Timestamp(TEST_END_DATE))
     ].copy()
 
     return train_df, test_df
@@ -144,20 +117,22 @@ def main() -> None:
 
         joblib.dump(model, MODEL_PATH)
 
-        report = pd.DataFrame([
-            {
-                "model": "Random Forest",
-                "mae": mae,
-                "rmse": rmse,
-                "wmape": demand_wmape,
-                "train_rows": len(train_df),
-                "test_rows": len(test_df),
-                "train_start_date": TRAIN_START_DATE,
-                "train_end_date": TRAIN_END_DATE,
-                "test_start_date": TEST_START_DATE,
-                "test_end_date": TEST_END_DATE,
-            }
-        ])
+        report = pd.DataFrame(
+            [
+                {
+                    "model": "Random Forest",
+                    "mae": mae,
+                    "rmse": rmse,
+                    "wmape": demand_wmape,
+                    "train_rows": len(train_df),
+                    "test_rows": len(test_df),
+                    "train_start_date": TRAIN_START_DATE,
+                    "train_end_date": TRAIN_END_DATE,
+                    "test_start_date": TEST_START_DATE,
+                    "test_end_date": TEST_END_DATE,
+                }
+            ]
+        )
         report.to_csv(REPORT_PATH, index=False)
 
         logging.info("Saved model to %s", MODEL_PATH)
